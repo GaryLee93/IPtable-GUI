@@ -37,7 +37,7 @@ class RuleList():
             self.rules = []
     
     def hasSameRule(self, test_rule: Rule):
-        print(self.rules)
+        print(test_rule)
         for rule in self.rules:
             if rule.ip == test_rule.ip and rule.IPmask == test_rule.IPmask and rule.port == test_rule.port:
                 return True
@@ -109,15 +109,66 @@ class MainWindow(QMainWindow):
         self.addRuleWindow.show()
         exec_result = self.addRuleWindow.exec_()
         if exec_result == QtWidgets.QDialog.Accepted:
-            rule = Rule(self.addRuleWindow.ip, self.addRuleWindow.IPMask, self.addRuleWindow.port, self.addRuleWindow.limit)
+            # rule = Rule(self.addRuleWindow.ip, self.addRuleWindow.IPMask, self.addRuleWindow.port, self.addRuleWindow.limit)
+            rule = self.addRuleWindow.rule
             ruleList.addRule(rule)
             self.addRuleToUI(rule)
         return
 
     def addRuleToUI(self, rule: Rule):
-        ruleWidget = RuleWidget(rule)
+        # ruleWidget = RuleWidget(rule)
+        ruleWidget = RuleWidget(rule, onDeleteCallback=self.deleteRuleCallback, onEditCallback=self.openEditRuleWindow)
         ruleWidget.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         self.ruleLayout.insertWidget(0, ruleWidget)
+
+    def deleteRuleCallback(self, ruleWidget):
+        ruleList.removeRule(ruleWidget.rule)
+        ruleWidget.setParent(None)
+        ruleWidget.deleteLater()
+
+    def openEditRuleWindow(self, ruleWidget):
+        editWindow = AddRuleWindow()
+        rule = ruleWidget.rule
+
+        # 1) Populate IP and Mask
+        editWindow.ui.IP.setText(rule.ip)
+        editWindow.ui.Mask.setText(rule.IPmask)
+
+        # 2) Populate Port (built-in service or Other)
+        found = False
+        for svc_name, svc_port in service_to_port.items():
+            if svc_port == rule.port:
+                idx = editWindow.ui.PortComboBox.findText(svc_name)
+                editWindow.ui.PortComboBox.setCurrentIndex(idx)
+                found = True
+                break
+        if not found:
+            idx = editWindow.ui.PortComboBox.findText("Other")
+            editWindow.ui.PortComboBox.setCurrentIndex(idx)
+            editWindow.ui.Port.setText(rule.port)
+
+        # 3) Populate Limit (-1 → unlimited)
+        if rule.limit == -1:
+            editWindow.ui.checkBox.setChecked(True)
+        else:
+            editWindow.ui.checkBox_2.setChecked(True)
+            editWindow.ui.LimitMB.setText(str(rule.limit))
+
+        # Show dialog
+        if editWindow.exec_() == QtWidgets.QDialog.Accepted:
+            newRule = editWindow.rule
+
+            # Update data
+            ruleList.removeRule(rule)
+            ruleList.addRule(newRule)
+
+            # Update UI
+            ruleWidget.rule = newRule
+            ruleWidget.label.setText(
+                ruleWidget.constructRuleStr(
+                    newRule.ip, newRule.limit, newRule.IPmask, newRule.port
+                )
+            )
         
 class AddRuleWindow(QDialog):
     def __init__(self):
@@ -212,10 +263,10 @@ class AddRuleWindow(QDialog):
         return True
 
 class RuleWidget(QWidget):
-    def __init__(self, rule: Rule, onDeleteCallback=None):
+    def __init__(self, rule: Rule, onDeleteCallback=None, onEditCallback=None):
         super().__init__()
         self.rule = rule
-
+        self.onEditCallback   = onEditCallback
         self.onDeleteCallback = onDeleteCallback
 
         layout = QtWidgets.QHBoxLayout()
@@ -233,6 +284,7 @@ class RuleWidget(QWidget):
         self.editButton.setFixedWidth(55)
         self.editButton.setFont(font)
         layout.addWidget(self.editButton)
+        self.editButton.clicked.connect(self.editSelf)
 
         self.deleteButton = QtWidgets.QPushButton("X")
         self.deleteButton.setStyleSheet("background-color: red; color: white;")
@@ -247,12 +299,16 @@ class RuleWidget(QWidget):
 
         self.deleteButton.clicked.connect(self.deleteSelf)
 
+    def editSelf(self):
+        if self.onEditCallback:
+            self.onEditCallback(self)
+
     def deleteSelf(self):
         if self.onDeleteCallback:
             self.onDeleteCallback(self)
-        ruleList.removeRule(self.rule)
-        self.setParent(None)
-        self.deleteLater()
+        # ruleList.removeRule(self.rule)
+        # self.setParent(None)
+        # self.deleteLater()
 
     def constructRuleStr(self, ip, limit, IPmask, port):
         IP_str = f"Rule: {ip}"

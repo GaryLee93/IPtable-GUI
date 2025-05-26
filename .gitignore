@@ -1,2 +1,3 @@
 *.json
 *_pycache__
+.venv

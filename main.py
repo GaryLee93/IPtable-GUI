@@ -42,7 +42,7 @@ class RuleList():
     def hasSameRule(self, test_rule: Rule):
         print(test_rule)
         for rule in self.rules:
-            if rule.ip == test_rule.ip and rule.IPmask == test_rule.IPmask and rule.port == test_rule.port and rule.limit == test_rule.limit:
+            if rule.ip == test_rule.ip and rule.IPmask == test_rule.IPmask and rule.port == test_rule.port:
                 return True
         return False
     
@@ -140,7 +140,12 @@ class MainWindow(QMainWindow):
         ruleWidget.deleteLater()
 
     def openEditRuleWindow(self, ruleWidget):
-        editWindow = AddRuleWindow()
+        """
+        Open the rule editor in 'edit mode', populate fields,
+        and update the existing Rule object in-place upon acceptance.
+        """
+        # pass the existing rule to AddRuleWindow so it knows it's editing
+        editWindow = AddRuleWindow(existing_rule=ruleWidget.rule)
         rule = ruleWidget.rule
 
         # 1) Populate IP and Mask
@@ -167,33 +172,46 @@ class MainWindow(QMainWindow):
             editWindow.ui.checkBox_2.setChecked(True)
             editWindow.ui.LimitMB.setText(str(rule.limit))
 
-        # Show dialog
+        # Show dialog and update in-place if accepted
         if editWindow.exec_() == QtWidgets.QDialog.Accepted:
-            newRule = editWindow.rule
+            updated = editWindow.rule
+            orig = ruleWidget.rule
+            # update fields of the existing Rule object
+            orig.ip     = updated.ip       # IP address
+            orig.IPmask = updated.IPmask   # subnet mask
+            orig.port   = updated.port     # port number
+            orig.limit  = updated.limit    # bandwidth limit
 
-            # Update data
-            ruleList.removeRule(rule)
-            ruleList.addRule(newRule)
-
-            # Update UI
-            ruleWidget.rule = newRule
+            # refresh UI label without changing widget order
             ruleWidget.label.setText(
                 ruleWidget.constructRuleStr(
-                    newRule.ip, newRule.limit, newRule.IPmask, newRule.port
+                    orig.ip, orig.limit, orig.IPmask, orig.port
                 )
             )
 
 class AddRuleWindow(QDialog):
-    def __init__(self):
+    def __init__(self, existing_rule=None):
+        """
+        Initialize the Add/Edit Rule dialog.
+        If existing_rule is provided, enter edit mode.
+        """
         super().__init__()
         self.ui = AddRuleWindowUI.Ui_Dialog()
         self.ui.setupUi(self)
+
+        # connect signals
         self.ui.checkBox.toggled.connect(self.onCheckBoxToggled)
         self.ui.checkBox_2.toggled.connect(self.onCheckBoxToggled)
         self.ui.buttonBox.accepted.disconnect(self.accept)
         self.ui.buttonBox.accepted.connect(self.checkRuleData)
         self.ui.PortComboBox.currentTextChanged.connect(self.OnPortSelect)
         self.ui.LimitMB.setEnabled(False)
+
+        # editing state
+        self.original_rule = existing_rule
+        self.editing = existing_rule is not None
+
+        # this will hold the new/updated Rule
         self.rule = None
     
     def onCheckBoxToggled(self):
@@ -216,46 +234,71 @@ class AddRuleWindow(QDialog):
             self.ui.Port.setEnabled(False)
 
     def checkRuleData(self):
+        """
+        Validate inputs, build a Rule object, and
+        prevent duplicates—skipping the original when editing.
+        """
         # Check IP and Port validity
         ip = self.ui.IP.text().strip()
-        port = self.ui.Port.text().strip() if self.ui.PortComboBox.currentText() == "Other" else service_to_port[self.ui.PortComboBox.currentText()] 
+        port = (
+            self.ui.Port.text().strip()
+            if self.ui.PortComboBox.currentText() == "Other"
+            else service_to_port[self.ui.PortComboBox.currentText()]
+        )
         if len(port) == 0 and len(ip) == 0:
             QMessageBox.warning(self, "Warning", "At least port or IP must be filled")
-            return 
+            return
         if len(ip) != 0 and not self.isValidIP(ip):
             QMessageBox.warning(self, "Warning", "Invalid IP")
-            return 
-        if len(port) != 0 and (not port.isdigit()):
+            return
+        if len(port) != 0 and not port.isdigit():
             QMessageBox.warning(self, "Warning", "Port must be an integer")
-            return 
-        
+            return
+
         # Check IPMask validity
         IPMask = self.ui.Mask.text().strip()
         if len(IPMask) != 0 and not self.isValidMask(IPMask):
             QMessageBox.warning(self, "Warning", "Mask must be a positive integer in 0~32")
-            return 
+            return
 
         # Check limit setting
         if self.ui.checkBox.isChecked():
             limit = -1
         elif self.ui.checkBox_2.isChecked():
-            limit = self.ui.LimitMB.text().strip()
-            if not limit.isdigit():
+            limit_text = self.ui.LimitMB.text().strip()
+            if not limit_text.isdigit():
                 QMessageBox.warning(self, "Warning", "Limit must be an integer")
-                return 
-            elif int(limit) < 0:
+                return
+            if int(limit_text) < 0:
                 QMessageBox.warning(self, "Warning", "Limit must be a positive integer")
-                return 
-            else:
-                limit = int(limit)
+                return
+            limit = int(limit_text)
         else:
-            QMessageBox.warning(self, "Warning", "Please select a limit type")  
+            QMessageBox.warning(self, "Warning", "Please select a limit type")
             return
-        
-        self.rule = Rule(ip, IPMask, port, limit)        
-        if(ruleList.hasSameRule(self.rule)):
-            QMessageBox.warning(self, "Warning", "Rule already exists")
-            return 
+
+        # build the Rule object
+        self.rule = Rule(ip, IPMask, port, limit)
+
+        # duplicate check
+        if self.editing:
+            # allow same as original, but block any other duplicate
+            for r in ruleList.rules:
+                if (
+                    r is not self.original_rule
+                    and r.ip == self.rule.ip
+                    and r.IPmask == self.rule.IPmask
+                    and r.port == self.rule.port
+                ):
+                    QMessageBox.warning(self, "Warning", "Rule already exists")
+                    return
+        else:
+            # in add mode, block any duplicate
+            if ruleList.hasSameRule(self.rule):
+                QMessageBox.warning(self, "Warning", "Rule already exists")
+                return
+
+        # all checks passed
         self.accept()
     
     def isValidMask(self, mask):

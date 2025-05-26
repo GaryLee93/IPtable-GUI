@@ -4,6 +4,7 @@ from dataclasses import dataclass, asdict
 import MainWindowUI, AddRuleWindowUI
 import json
 import sys
+import iptablesControl  # Import iptables control module
 
 service_to_port = {
     "HTTP": "80",
@@ -72,6 +73,7 @@ class RuleList():
     def traverseRule(self):
         for rule in self.rules:
             print(rule.ip, rule.IPmask, rule.port, rule.limit)
+
 ruleList = RuleList()
 
 class MainWindow(QMainWindow):
@@ -95,8 +97,17 @@ class MainWindow(QMainWindow):
             self.addRuleToUI(rule)
 
     def applyRules(self):
+        # Save previous rules to PreviousRules.json and current rules to LatestRules.json
         ruleList.savePreviousRules()
         ruleList.saveRules()
+        # Apply iptables rules from JSON file
+        try:
+            iptablesControl.load_rules_from_json("LatestRules.json")
+        except Exception as e:
+            # Show error message if iptables application fails
+            QMessageBox.warning(self, "Error", f"Failed to apply iptables rules: {e}")
+            return
+        # Notify user that rules have been applied
         QMessageBox.information(self, "Information", "Rules applied")
 
     def openAddRuleWindow(self):
@@ -169,7 +180,7 @@ class MainWindow(QMainWindow):
                     newRule.ip, newRule.limit, newRule.IPmask, newRule.port
                 )
             )
-        
+
 class AddRuleWindow(QDialog):
     def __init__(self):
         super().__init__()
@@ -203,7 +214,7 @@ class AddRuleWindow(QDialog):
             self.ui.Port.setEnabled(False)
 
     def checkRuleData(self):
-        #Check IP and Port
+        # Check IP and Port validity
         ip = self.ui.IP.text().strip()
         port = self.ui.Port.text().strip() if self.ui.PortComboBox.currentText() == "Other" else service_to_port[self.ui.PortComboBox.currentText()] 
         if len(port) == 0 and len(ip) == 0:
@@ -213,22 +224,22 @@ class AddRuleWindow(QDialog):
             QMessageBox.warning(self, "Warning", "Invalid IP")
             return 
         if len(port) != 0 and (not port.isdigit()):
-            QMessageBox.warning(self, "Warning", "Port must be a Integer")
+            QMessageBox.warning(self, "Warning", "Port must be an integer")
             return 
         
-        #Check IPMask
+        # Check IPMask validity
         IPMask = self.ui.Mask.text().strip()
         if len(IPMask) != 0 and not self.isValidMask(IPMask):
             QMessageBox.warning(self, "Warning", "Mask must be a positive integer in 0~32")
             return 
 
-        #Check limit
+        # Check limit setting
         if self.ui.checkBox.isChecked():
             limit = -1
         elif self.ui.checkBox_2.isChecked():
             limit = self.ui.LimitMB.text().strip()
             if not limit.isdigit():
-                QMessageBox.warning(self, "Warning", "Limit must be a integer")
+                QMessageBox.warning(self, "Warning", "Limit must be an integer")
                 return 
             elif int(limit) < 0:
                 QMessageBox.warning(self, "Warning", "Limit must be a positive integer")
@@ -306,9 +317,6 @@ class RuleWidget(QWidget):
     def deleteSelf(self):
         if self.onDeleteCallback:
             self.onDeleteCallback(self)
-        # ruleList.removeRule(self.rule)
-        # self.setParent(None)
-        # self.deleteLater()
 
     def constructRuleStr(self, ip, limit, IPmask, port):
         IP_str = f"Rule: {ip}"
@@ -316,7 +324,7 @@ class RuleWidget(QWidget):
         IPmask_str = f"/{IPmask}" if len(IPmask) != 0 else ""
         port_str = f":{port}" if len(port) != 0 else ""
         return IP_str + IPmask_str + port_str + limit_str
-    
+
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     mainWindow = MainWindow()

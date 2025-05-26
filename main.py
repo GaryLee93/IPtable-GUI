@@ -5,6 +5,8 @@ import MainWindowUI, AddRuleWindowUI
 import json
 import sys
 import iptablesControl  # Import iptables control module
+import os
+os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
 service_to_port = {
     "HTTP": "80",
@@ -40,7 +42,7 @@ class RuleList():
     def hasSameRule(self, test_rule: Rule):
         print(test_rule)
         for rule in self.rules:
-            if rule.ip == test_rule.ip and rule.IPmask == test_rule.IPmask and rule.port == test_rule.port:
+            if rule.ip == test_rule.ip and rule.IPmask == test_rule.IPmask and rule.port == test_rule.port and rule.limit == test_rule.limit:
                 return True
         return False
     

@@ -8,7 +8,7 @@ def generate_iptables_command(rule):
     if rule.get("ip"):
         cmd += ["-s", rule["ip"]]
     if rule.get("port"):
-        cmd += ["--dport", rule["port"]]
+        cmd += ["--sport", rule["port"]]
     cmd_accept = cmd + ["-j"] + rule["action"].split()
     print(cmd_accept)
     subprocess.run(cmd_accept)
@@ -21,7 +21,7 @@ def generate_iptables_command(rule):
         cmd += ["-d", rule["ip"]]
     cmd += ["-p", rule["protocol"]]
     if rule.get("port"):
-        cmd += ["--sport", rule["port"]]
+        cmd += ["--dport", rule["port"]]
     cmd_accept = cmd + ["-j"] + rule["action"].split()
     subprocess.run(cmd_accept)
     if rule["quota"] == True:

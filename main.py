@@ -1,38 +1,3 @@
-竺鼠士官長
-masterguimeapig
-往成為肝帝的路上邁進中
-
-企鵝[QWER] — 晚上8:23
-from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
-from PyQt5 import QtWidgets, QtGui
-from dataclasses import dataclass, asdict
-import MainWindowUI, AddRuleWindowUI
-import json
-import sys
-展開
-main.py
-12 KB
-企鵝[QWER] — 晚上9:27
-from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
-from PyQt5 import QtWidgets, QtGui
-from dataclasses import dataclass, asdict
-import MainWindowUI, AddRuleWindowUI
-import json
-import sys
-展開
-main.py
-13 KB
-企鵝[QWER] — 晚上10:09
-from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
-from PyQt5 import QtWidgets, QtGui
-from dataclasses import dataclass, asdict
-import MainWindowUI, AddRuleWindowUI
-import json
-import sys
-展開
-main.py
-13 KB
-﻿
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
 from PyQt5 import QtWidgets, QtGui
 from dataclasses import dataclass, asdict
@@ -367,5 +332,3 @@ if __name__ == '__main__':
     mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(app.exec_())
-main.py
-13 KB

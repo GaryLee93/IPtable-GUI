@@ -1,3 +1,57 @@
+竺鼠士官長
+masterguimeapig
+往成為肝帝的路上邁進中
+
+企鵝[QWER] — 晚上8:23
+from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
+from PyQt5 import QtWidgets, QtGui
+from dataclasses import dataclass, asdict
+import MainWindowUI, AddRuleWindowUI
+import json
+import sys
+展開
+main.py
+12 KB
+企鵝[QWER] — 晚上9:27
+from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
+from PyQt5 import QtWidgets, QtGui
+from dataclasses import dataclass, asdict
+import MainWindowUI, AddRuleWindowUI
+import json
+import sys
+展開
+main.py
+13 KB
+企鵝[QWER] — 晚上10:09
+from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
+from PyQt5 import QtWidgets, QtGui
+from dataclasses import dataclass, asdict
+import MainWindowUI, AddRuleWindowUI
+import json
+import sys
+展開
+main.py
+13 KB
+企鵝[QWER] — 晚上10:24
+from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
+from PyQt5 import QtWidgets, QtGui
+from dataclasses import dataclass, asdict
+import MainWindowUI, AddRuleWindowUI
+import json
+import sys
+展開
+main.py
+13 KB
+import subprocess
+import json
+
+def generate_iptables_command(rule):
+    # INPUT
+    cmd = ["sudo", "iptables", "-A", "INPUT"]
+展開
+iptablesControl.py
+3 KB
+﻿
 import subprocess
 import json
 
@@ -54,7 +108,7 @@ def load_rules_from_json(file_path):
         else:
             action = "ACCEPT"
             if item["limit"] != -1:
-                action += f" -m quota --quota {item['limit']}"
+                action += f" -m quota --quota {(item['limit']*1024*1024)}"
                 quota = True
         ip = item.get('ip')
         if ip:

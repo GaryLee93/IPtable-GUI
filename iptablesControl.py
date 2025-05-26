@@ -9,7 +9,8 @@ def generate_iptables_command(rule):
         cmd += ["-s", rule["ip"]]
     if rule.get("port"):
         cmd += ["--dport", rule["port"]]
-    cmd_accept = cmd + ["-j", rule["action"]]
+    cmd_accept = cmd + ["-j", rule["action"].split()]
+    print(cmd_accept)
     subprocess.run(cmd_accept)
     if rule["quota"] == True:
         cmd_reject = cmd + ["-j", "REJECT"]
@@ -48,11 +49,11 @@ def load_rules_from_json(file_path):
         rules_data = json.load(f)        
     for item in rules_data:
         quota = False
-        if item["limit"] == "0":
+        if item["limit"] == 0:
             action = "REJECT"
         else:
             action = "ACCEPT"
-            if item["limit"] != "-1":
+            if item["limit"] != -1:
                 action += f" -m quota --quota {item['limit']}"
                 quota = True
         ip = f"{item['ip']}/{item['mask']}" if "ip" in item and "mask" in item else None

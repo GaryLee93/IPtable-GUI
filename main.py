@@ -1,3 +1,38 @@
+竺鼠士官長
+masterguimeapig
+往成為肝帝的路上邁進中
+
+企鵝[QWER] — 晚上8:23
+from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
+from PyQt5 import QtWidgets, QtGui
+from dataclasses import dataclass, asdict
+import MainWindowUI, AddRuleWindowUI
+import json
+import sys
+展開
+main.py
+12 KB
+企鵝[QWER] — 晚上9:27
+from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
+from PyQt5 import QtWidgets, QtGui
+from dataclasses import dataclass, asdict
+import MainWindowUI, AddRuleWindowUI
+import json
+import sys
+展開
+main.py
+13 KB
+企鵝[QWER] — 晚上10:09
+from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
+from PyQt5 import QtWidgets, QtGui
+from dataclasses import dataclass, asdict
+import MainWindowUI, AddRuleWindowUI
+import json
+import sys
+展開
+main.py
+13 KB
+﻿
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QDialog, QWidget
 from PyQt5 import QtWidgets, QtGui
 from dataclasses import dataclass, asdict
@@ -95,7 +130,7 @@ class MainWindow(QMainWindow):
         self.ui.AddNewRuleButton.clicked.connect(self.openAddRuleWindow)
         self.addRuleWindow = None
 
-        for rule in ruleList.rules:
+        for rule in reversed(ruleList.rules):
             self.addRuleToUI(rule)
 
     def applyRules(self):
@@ -125,14 +160,14 @@ class MainWindow(QMainWindow):
             # rule = Rule(self.addRuleWindow.ip, self.addRuleWindow.IPMask, self.addRuleWindow.port, self.addRuleWindow.limit)
             rule = self.addRuleWindow.rule
             ruleList.addRule(rule)
-            self.addRuleToUI(rule)
+            self.addRuleToUI(rule, position=len(ruleList.rules)-1)
         return
 
-    def addRuleToUI(self, rule: Rule):
+    def addRuleToUI(self, rule: Rule, position=0):
         # ruleWidget = RuleWidget(rule)
         ruleWidget = RuleWidget(rule, onDeleteCallback=self.deleteRuleCallback, onEditCallback=self.openEditRuleWindow)
         ruleWidget.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
-        self.ruleLayout.insertWidget(0, ruleWidget)
+        self.ruleLayout.insertWidget(position, ruleWidget)
 
     def deleteRuleCallback(self, ruleWidget):
         ruleList.removeRule(ruleWidget.rule)
@@ -332,3 +367,5 @@ if __name__ == '__main__':
     mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(app.exec_())
+main.py
+13 KB

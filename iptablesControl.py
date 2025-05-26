@@ -56,7 +56,10 @@ def load_rules_from_json(file_path):
             if item["limit"] != -1:
                 action += f" -m quota --quota {item['limit']}"
                 quota = True
-        ip = f"{item['ip']}/{item['mask']}" if "ip" in item and "mask" in item else None
+        ip = item.get('ip')
+        if ip:
+            if item.get('IPmask'):
+                ip = f"{ip}/{item['IPmask']}"
         port = item.get("port")
         # protocol
         if port is not None:

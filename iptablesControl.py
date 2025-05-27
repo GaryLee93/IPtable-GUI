@@ -25,6 +25,8 @@ def generate_iptables_command(rule):
     cmd_accept = cmd + ["-j"] + rule["action"].split()
     subprocess.run(cmd_accept)
     if rule["quota"] == True:
+        cmd_log = cmd + ["-j", "LOG", "--log-prefix", "QUOTA_EXCEEDED "]
+        subprocess.run(cmd_log)
         cmd_reject = cmd + ["-j", "REJECT"]
         subprocess.run(cmd_reject)
     return

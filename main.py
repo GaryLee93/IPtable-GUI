@@ -6,7 +6,7 @@ import json
 import sys
 import iptablesControl  # Import iptables control module
 import os
-os.environ['QT_QPA_PLATFORM'] = 'xcb'
+# os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
 service_to_port = {
     "HTTP": "80",
@@ -266,13 +266,13 @@ class AddRuleWindow(QDialog):
             limit = -1
         elif self.ui.checkBox_2.isChecked():
             limit_text = self.ui.LimitMB.text().strip()
-            if not limit_text.isdigit():
-                QMessageBox.warning(self, "Warning", "Limit must be an integer")
+            if not self.isNumeric(limit_text):
+                QMessageBox.warning(self, "Warning", "Limit must be an positive number")
                 return
-            if int(limit_text) < 0:
+            if float(limit_text) < 0:
                 QMessageBox.warning(self, "Warning", "Limit must be a positive integer")
                 return
-            limit = int(limit_text)
+            limit = float(limit_text)
         else:
             QMessageBox.warning(self, "Warning", "Please select a limit type")
             return
@@ -300,6 +300,14 @@ class AddRuleWindow(QDialog):
 
         # all checks passed
         self.accept()
+    def isNumeric(self, value):
+        if value.isdigit():
+            return True
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
     
     def isValidMask(self, mask):
         if not mask.isdigit():

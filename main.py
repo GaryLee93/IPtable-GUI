@@ -6,7 +6,7 @@ import json
 import sys
 import iptablesControl  # Import iptables control module
 import os
-# os.environ['QT_QPA_PLATFORM'] = 'xcb'
+#os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
 service_to_port = {
     "HTTP": ["TCP", "80"],
@@ -145,7 +145,6 @@ class MainWindow(QMainWindow):
         Open the rule editor in 'edit mode', populate fields,
         and update the existing Rule object in-place upon acceptance.
         """
-        # pass the existing rule to AddRuleWindow so it knows it's editing
         editWindow = AddRuleWindow(existing_rule=ruleWidget.rule)
         rule = ruleWidget.rule
 
@@ -153,20 +152,21 @@ class MainWindow(QMainWindow):
         editWindow.ui.IP.setText(rule.ip)
         editWindow.ui.Mask.setText(rule.IPmask)
 
-        # 2) Populate Port (built-in service or Other)
-        found = False
-        for svc_name, svc_port in service_to_port.items():
-            if svc_port == rule.port:
-                idx = editWindow.ui.PortComboBox.findText(svc_name)
-                editWindow.ui.PortComboBox.setCurrentIndex(idx)
-                found = True
-                break
-        if not found:
-            idx = editWindow.ui.PortComboBox.findText("Other")
-            editWindow.ui.PortComboBox.setCurrentIndex(idx)
+        # 2) Populate Protocol
+        protocol = getattr(rule, "protocol", "")
+        if hasattr(editWindow.ui, "ProtocolComboBox"):
+            protocols = [editWindow.ui.ProtocolComboBox.itemText(i) for i in range(editWindow.ui.ProtocolComboBox.count())]
+            if protocol and protocol in protocols:
+                idx = editWindow.ui.ProtocolComboBox.findText(protocol)
+                editWindow.ui.ProtocolComboBox.setCurrentIndex(idx)
+            else:
+                editWindow.ui.ProtocolComboBox.setCurrentIndex(0)
+
+        # 3) Populate Port
+        if hasattr(editWindow.ui, "Port"):
             editWindow.ui.Port.setText(rule.port)
 
-        # 3) Populate Limit (-1 → unlimited)
+        # 4) Populate Limit
         if rule.limit == -1:
             editWindow.ui.checkBox.setChecked(True)
         else:
@@ -177,13 +177,12 @@ class MainWindow(QMainWindow):
         if editWindow.exec_() == QtWidgets.QDialog.Accepted:
             updated = editWindow.rule
             orig = ruleWidget.rule
-            # update fields of the existing Rule object
-            orig.ip     = updated.ip       # IP address
-            orig.IPmask = updated.IPmask   # subnet mask
-            orig.port   = updated.port     # port number
-            orig.limit  = updated.limit    # bandwidth limit
+            orig.ip     = updated.ip
+            orig.IPmask = updated.IPmask
+            orig.port   = updated.port
+            orig.limit  = updated.limit
+            orig.protocol = updated.protocol
 
-            # refresh UI label without changing widget order
             ruleWidget.label.setText(
                 ruleWidget.constructRuleStr(
                     orig.ip, orig.limit, orig.IPmask, orig.port

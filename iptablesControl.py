@@ -4,9 +4,10 @@ import json
 def generate_iptables_command(rule):
     # INPUT
     cmd = ["sudo", "iptables", "-A", "INPUT"]
-    cmd += ["-p", rule["protocol"]]
     if rule.get("ip"):
         cmd += ["-s", rule["ip"]]
+    if rule.get("protocol"):
+        cmd += ["-p", rule["protocol"]]
     if rule.get("port"):
         cmd += ["--sport", rule["port"]]
     cmd_accept = cmd + ["-j"] + rule["action"].split()
@@ -19,7 +20,8 @@ def generate_iptables_command(rule):
     cmd = ["sudo", "iptables", "-A", "OUTPUT"]
     if rule.get("ip"):
         cmd += ["-d", rule["ip"]]
-    cmd += ["-p", rule["protocol"]]
+    if rule.get("protocol"):
+        cmd += ["-p", rule["protocol"]]
     if rule.get("port"):
         cmd += ["--dport", rule["port"]]
     cmd_accept = cmd + ["-j"] + rule["action"].split()

@@ -31,18 +31,7 @@ def generate_iptables_command(rule):
         subprocess.run(cmd_reject)
     return
 
-udp_ports = {
-    "53",   # DNS
-    "67", "68",  # DHCP
-    "69",   # TFTP
-    "123",  # NTP
-    "161", "162",  # SNMP
-    "514",  # Syslog
-    "5060",  # SIP
-    "5353",  # mDNS
-}
-
-# {"ip": "<ip>", "mask": "<mask>", "port": "<port>", "limit": "<limit>"}
+# {"ip": "<ip>", "mask": "<mask>", "protocol": "<protocol>", "port": "<port>", "limit": "<limit>"}
 # <limit> = -1 for ACCEPT without limit, 0 for REJECT
 def load_rules_from_json(file_path):
     # Clear the iptables rules
@@ -63,14 +52,7 @@ def load_rules_from_json(file_path):
             if item.get('IPmask'):
                 ip = f"{ip}/{item['IPmask']}"
         port = item.get("port")
-        # protocol
-        if port is not None:
-            if port in udp_ports:
-                protocol = "udp"
-            else:
-                protocol = "tcp"
-        else:
-            protocol = None
+        protocol = item.get("protocol")
         rule = {
             "ip": ip,
             "protocol": protocol,

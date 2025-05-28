@@ -6,7 +6,7 @@ import json
 import sys
 import iptablesControl  # Import iptables control module
 import os
-# os.environ['QT_QPA_PLATFORM'] = 'xcb'
+os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
 service_to_port = {
     "HTTP": "80",

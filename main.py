@@ -6,16 +6,16 @@ import json
 import sys
 import iptablesControl  # Import iptables control module
 import os
-os.environ['QT_QPA_PLATFORM'] = 'xcb'
+# os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
 service_to_port = {
-    "HTTP": "80",
-    "HTTPS": "443",
-    "SSH": "22",
-    "FTP": "21",
-    "SMTP": "25",
-    "DNS": "53",
-    "TELNET": "23",
+    "HTTP": ["TCP", "80"],
+    "HTTPS": ["TCP", "443"],
+    "SSH": ["TCP", "22"],
+    "FTP": ["TCP", "21"],
+    "SMTP": ["TCP", "25"],
+    "DNS": ["UDP", "53"],
+    "TELNET": ["TCP", "23"],
 }
 
 @dataclass
@@ -24,6 +24,7 @@ class Rule():
     IPmask: str
     port: str
     limit: int
+    protocol: str
 
 class RuleList():
     def __init__(self):
@@ -204,7 +205,7 @@ class AddRuleWindow(QDialog):
         self.ui.checkBox_2.toggled.connect(self.onCheckBoxToggled)
         self.ui.buttonBox.accepted.disconnect(self.accept)
         self.ui.buttonBox.accepted.connect(self.checkRuleData)
-        self.ui.PortComboBox.currentTextChanged.connect(self.OnPortSelect)
+        self.ui.ProtocolComboBox.currentTextChanged.connect(self.OnProtocolSelect)
         self.ui.LimitMB.setEnabled(False)
 
         # editing state
@@ -226,9 +227,9 @@ class AddRuleWindow(QDialog):
         elif sender == self.ui.checkBox_2 and not sender.isChecked():
             self.ui.LimitMB.setEnabled(False)
 
-    def OnPortSelect(self):
+    def OnProtocolSelect(self):
         sender = self.sender()
-        if sender == self.ui.PortComboBox and sender.currentText() == "Other":
+        if sender == self.ui.ProtocolComboBox and (sender.currentText() == "TCP" or sender.currentText() == "UDP"):
             self.ui.Port.setEnabled(True)
         else:
             self.ui.Port.setEnabled(False)
@@ -240,14 +241,16 @@ class AddRuleWindow(QDialog):
         """
         # Check IP and Port validity
         ip = self.ui.IP.text().strip()
+        protocol = (
+            self.ui.ProtocolComboBox.currentText().strip()
+            if self.ui.ProtocolComboBox.currentText() != "ALL"
+            else ""
+        )
         port = (
             self.ui.Port.text().strip()
-            if self.ui.PortComboBox.currentText() == "Other"
-            else service_to_port[self.ui.PortComboBox.currentText()]
+            if self.ui.ProtocolComboBox.currentText() == "TCP" or self.ui.ProtocolComboBox.currentText() == "UDP" or self.ui.ProtocolComboBox.currentText() == "ALL"
+            else service_to_port[self.ui.ProtocolComboBox.currentText()]
         )
-        if len(port) == 0 and len(ip) == 0:
-            QMessageBox.warning(self, "Warning", "At least port or IP must be filled")
-            return
         if len(ip) != 0 and not self.isValidIP(ip):
             QMessageBox.warning(self, "Warning", "Invalid IP")
             return
@@ -278,7 +281,7 @@ class AddRuleWindow(QDialog):
             return
 
         # build the Rule object
-        self.rule = Rule(ip, IPMask, port, limit)
+        self.rule = Rule(ip, IPMask, port, limit, protocol)
 
         # duplicate check
         if self.editing:
@@ -299,6 +302,9 @@ class AddRuleWindow(QDialog):
                 return
 
         # all checks passed
+        if protocol in service_to_port:
+            self.rule.port = service_to_port[protocol][0]
+            self.rule.port = service_to_port[protocol][1]
         self.accept()
     def isNumeric(self, value):
         if value.isdigit():

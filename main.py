@@ -6,7 +6,7 @@ import json
 import sys
 import iptablesControl  # Import iptables control module
 import os
-# os.environ['QT_QPA_PLATFORM'] = 'xcb'
+os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
 service_to_port = {
     "HTTP": ["TCP", "80"],
@@ -249,7 +249,7 @@ class AddRuleWindow(QDialog):
         port = (
             self.ui.Port.text().strip()
             if self.ui.ProtocolComboBox.currentText() == "TCP" or self.ui.ProtocolComboBox.currentText() == "UDP" or self.ui.ProtocolComboBox.currentText() == "ALL"
-            else service_to_port[self.ui.ProtocolComboBox.currentText()]
+            else service_to_port[self.ui.ProtocolComboBox.currentText()][1]
         )
         if len(ip) != 0 and not self.isValidIP(ip):
             QMessageBox.warning(self, "Warning", "Invalid IP")
@@ -281,6 +281,10 @@ class AddRuleWindow(QDialog):
             return
 
         # build the Rule object
+        if protocol in service_to_port:
+            t_protocol = service_to_port[protocol][0]
+            port = service_to_port[protocol][1]
+            protocol = t_protocol
         self.rule = Rule(ip, IPMask, port, limit, protocol)
 
         # duplicate check
@@ -302,9 +306,7 @@ class AddRuleWindow(QDialog):
                 return
 
         # all checks passed
-        if protocol in service_to_port:
-            self.rule.port = service_to_port[protocol][0]
-            self.rule.port = service_to_port[protocol][1]
+
         self.accept()
     def isNumeric(self, value):
         if value.isdigit():

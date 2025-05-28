@@ -27,7 +27,11 @@ def generate_iptables_command(rule):
     cmd_accept = cmd + ["-j"] + rule["action"].split()
     subprocess.run(cmd_accept)
     if rule["quota"] == True:
-        cmd_log = cmd + ["-j", "LOG", "--log-prefix", "QUOTA_EXCEEDED "]
+        if rule.get("ip"):
+            log_prefix = "QUOTA_EXCEEDED "
+        else:
+            log_prefix = "QUOTAHTTP_EXCEEDED "
+        cmd_log = cmd + ["-j", "LOG", "--log-prefix", log_prefix]
         subprocess.run(cmd_log)
         cmd_reject = cmd + ["-j", "REJECT"]
         subprocess.run(cmd_reject)
@@ -38,6 +42,7 @@ def generate_iptables_command(rule):
 def load_rules_from_json(file_path):
     # Clear the iptables rules
     subprocess.run(["sudo", "iptables", "-F"])
+    subprocess.run(["sudo", "iptables", "-t", "nat", "-F"])
     with open(file_path, "r") as f:
         rules_data = json.load(f)        
     for item in rules_data:
@@ -47,7 +52,7 @@ def load_rules_from_json(file_path):
         else:
             action = "ACCEPT"
             if item["limit"] != -1:
-                action += f" -m quota --quota {(item['limit']*1024*1024)}"
+                action += f" -m quota --quota {int(item['limit']*1024*1024)}"
                 quota = True
         ip = item.get('ip')
         if ip:

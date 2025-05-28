@@ -145,7 +145,6 @@ class MainWindow(QMainWindow):
         Open the rule editor in 'edit mode', populate fields,
         and update the existing Rule object in-place upon acceptance.
         """
-        # pass the existing rule to AddRuleWindow so it knows it's editing
         editWindow = AddRuleWindow(existing_rule=ruleWidget.rule)
         rule = ruleWidget.rule
 
@@ -153,20 +152,21 @@ class MainWindow(QMainWindow):
         editWindow.ui.IP.setText(rule.ip)
         editWindow.ui.Mask.setText(rule.IPmask)
 
-        # 2) Populate Port (built-in service or Other)
-        found = False
-        for svc_name, svc_port in service_to_port.items():
-            if svc_port == rule.port:
-                idx = editWindow.ui.PortComboBox.findText(svc_name)
-                editWindow.ui.PortComboBox.setCurrentIndex(idx)
-                found = True
-                break
-        if not found:
-            idx = editWindow.ui.PortComboBox.findText("Other")
-            editWindow.ui.PortComboBox.setCurrentIndex(idx)
+        # 2) Populate Protocol
+        protocol = getattr(rule, "protocol", "")
+        if hasattr(editWindow.ui, "ProtocolComboBox"):
+            protocols = [editWindow.ui.ProtocolComboBox.itemText(i) for i in range(editWindow.ui.ProtocolComboBox.count())]
+            if protocol and protocol in protocols:
+                idx = editWindow.ui.ProtocolComboBox.findText(protocol)
+                editWindow.ui.ProtocolComboBox.setCurrentIndex(idx)
+            else:
+                editWindow.ui.ProtocolComboBox.setCurrentIndex(0)
+
+        # 3) Populate Port
+        if hasattr(editWindow.ui, "Port"):
             editWindow.ui.Port.setText(rule.port)
 
-        # 3) Populate Limit (-1 → unlimited)
+        # 4) Populate Limit
         if rule.limit == -1:
             editWindow.ui.checkBox.setChecked(True)
         else:
@@ -177,13 +177,12 @@ class MainWindow(QMainWindow):
         if editWindow.exec_() == QtWidgets.QDialog.Accepted:
             updated = editWindow.rule
             orig = ruleWidget.rule
-            # update fields of the existing Rule object
-            orig.ip     = updated.ip       # IP address
-            orig.IPmask = updated.IPmask   # subnet mask
-            orig.port   = updated.port     # port number
-            orig.limit  = updated.limit    # bandwidth limit
+            orig.ip     = updated.ip
+            orig.IPmask = updated.IPmask
+            orig.port   = updated.port
+            orig.limit  = updated.limit
+            orig.protocol = updated.protocol
 
-            # refresh UI label without changing widget order
             ruleWidget.label.setText(
                 ruleWidget.constructRuleStr(
                     orig.ip, orig.limit, orig.IPmask, orig.port
@@ -228,11 +227,20 @@ class AddRuleWindow(QDialog):
             self.ui.LimitMB.setEnabled(False)
 
     def OnProtocolSelect(self):
-        sender = self.sender()
-        if sender == self.ui.ProtocolComboBox and (sender.currentText() == "TCP" or sender.currentText() == "UDP"):
-            self.ui.Port.setEnabled(True)
-        else:
+        protocol = self.ui.ProtocolComboBox.currentText()
+        if protocol == "ALL":
+            self.ui.Port.clear()
             self.ui.Port.setEnabled(False)
+        elif protocol in ["TCP", "UDP"]:
+            self.ui.Port.setEnabled(True)
+            self.ui.Port.clear()
+        elif protocol in service_to_port:
+            svc = service_to_port[protocol]
+            self.ui.Port.setText(str(svc[1]))
+            self.ui.Port.setEnabled(False)
+        else:
+            self.ui.Port.setEnabled(True)
+            self.ui.Port.clear()
 
     def checkRuleData(self):
         """
@@ -246,11 +254,14 @@ class AddRuleWindow(QDialog):
             if self.ui.ProtocolComboBox.currentText() != "ALL"
             else ""
         )
-        port = (
-            self.ui.Port.text().strip()
-            if self.ui.ProtocolComboBox.currentText() == "TCP" or self.ui.ProtocolComboBox.currentText() == "UDP" or self.ui.ProtocolComboBox.currentText() == "ALL"
-            else service_to_port[self.ui.ProtocolComboBox.currentText()][1]
-        )
+        protocol_text = self.ui.ProtocolComboBox.currentText()
+        if protocol_text in ["TCP", "UDP", "ALL"]:
+            port = self.ui.Port.text().strip()
+        elif protocol_text in service_to_port:
+            svc = service_to_port[protocol_text]
+            port = str(svc[1])  
+        else:
+            port = self.ui.Port.text().strip()
         if len(ip) != 0 and not self.isValidIP(ip):
             QMessageBox.warning(self, "Warning", "Invalid IP")
             return
